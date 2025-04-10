@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | Stock Register</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <header class="bg-blue-700 text-white p-4 flex justify-between items-center">
+    <h1 class="text-xl font-bold">Stock Management Dashboard</h1>
+    <button onclick="logout()" class="bg-white text-blue-700 px-3 py-1 rounded hover:bg-blue-100">Logout</button>
+  </header>
+
+  <main class="p-4 space-y-4">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <a href="stock.html" class="bg-white p-4 shadow rounded hover:bg-blue-50 text-center">
+        <h2 class="text-lg font-semibold">Stock</h2>
+      </a>
+      <a href="trash.html" class="bg-white p-4 shadow rounded hover:bg-blue-50 text-center">
+        <h2 class="text-lg font-semibold">Trash</h2>
+      </a>
+      <a href="history.html" class="bg-white p-4 shadow rounded hover:bg-blue-50 text-center">
+        <h2 class="text-lg font-semibold">History</h2>
+      </a>
+      <a href="settings.html" class="bg-white p-4 shadow rounded hover:bg-blue-50 text-center">
+        <h2 class="text-lg font-semibold">Settings</h2>
+      </a>
+    </div>
+  </main>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCi7NyZMr-Xx36wiMZFJy0gO2u3Yd-h68A",
+      authDomain: "sreepadma-stock-register.firebaseapp.com",
+      projectId: "sreepadma-stock-register",
+      storageBucket: "sreepadma-stock-register.appspot.com",
+      messagingSenderId: "329115569368",
+      appId: "1:329115569368:web:e0ddd9690fb20034309bad"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+
+    function logout() {
+      auth.signOut().then(() => {
+        window.location.href = "login.html";
+      });
+    }
+  </script>
+</body>
+</html>

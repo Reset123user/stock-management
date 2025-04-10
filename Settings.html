@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Settings | Stock Register</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+</head>
+<body class="bg-gray-100">
+  <header class="bg-blue-600 text-white p-4 flex justify-between items-center">
+    <h1 class="text-xl font-semibold">Settings</h1>
+    <button onclick="window.location.href='dashboard.html'" class="bg-white text-blue-600 px-3 py-1 rounded hover:bg-gray-100">Back</button>
+  </header>
+
+  <main class="p-4 space-y-6">
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="text-lg font-semibold mb-2">Theme & Avatars</h2>
+      <button class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Change Theme</button>
+      <button class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 ml-2">Manage Avatars</button>
+    </section>
+
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="text-lg font-semibold mb-2">Categories</h2>
+      <input type="text" id="categoryInput" placeholder="Add new category..." class="border p-2 rounded w-1/2" />
+      <button onclick="addCategory()" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 ml-2">Add</button>
+      <ul id="categoryList" class="mt-2 list-disc ml-5"></ul>
+    </section>
+
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="text-lg font-semibold mb-2">Backup & Restore</h2>
+      <button onclick="backupNow()" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">Backup Now</button>
+      <div id="backupStatus" class="mt-2 text-sm text-gray-600"></div>
+
+      <h3 class="mt-4 font-medium">Backup History</h3>
+      <ul id="backupHistory" class="mt-2 space-y-1"></ul>
+    </section>
+  </main>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCi7NyZMr-Xx36wiMZFJy0gO2u3Yd-h68A",
+      authDomain: "sreepadma-stock-register.firebaseapp.com",
+      projectId: "sreepadma-stock-register",
+      storageBucket: "sreepadma-stock-register.appspot.com"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    async function addCategory() {
+      const input = document.getElementById("categoryInput");
+      const name = input.value.trim();
+      if (!name) return;
+      await db.collection("categories").add({ name });
+      input.value = "";
+      loadCategories();
+    }
+
+    async function loadCategories() {
+      const list = document.getElementById("categoryList");
+      list.innerHTML = "";
+      const snapshot = await db.collection("categories").get();
+      snapshot.forEach(doc => {
+        const li = document.createElement("li");
+        li.textContent = doc.data().name;
+        list.appendChild(li);
+      });
+    }
+
+    async function backupNow() {
+      const status = document.getElementById("backupStatus");
+      status.textContent = "Backing up...";
+      const now = new Date();
+      const backupName = `backup-${now.toISOString()}.json`;
+      const stockSnap = await db.collection("stock").get();
+      const items = stockSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
+      const ref = storage.ref().child(`backups/${backupName}`);
+      await ref.put(blob);
+      await db.collection("backups").add({ name: backupName, createdAt: firebase.firestore.Timestamp.fromDate(now) });
+      status.textContent = "Backup complete.";
+      loadBackupHistory();
+    }
+
+    async function loadBackupHistory() {
+      const list = document.getElementById("backupHistory");
+      list.innerHTML = "";
+      const snapshot = await db.collection("backups").orderBy("createdAt", "desc").get();
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const li = document.createElement("li");
+        const date = data.createdAt?.toDate().toLocaleString();
+        li.innerHTML = `
+          ${data.name} - ${date}
+          <button onclick="downloadBackup('${data.name}')" class="ml-2 text-blue-600 underline">Download</button>
+          <button onclick="confirmRestore('${data.name}')" class="ml-2 text-red-600 underline">Restore</button>
+        `;
+        list.appendChild(li);
+      });
+    }
+
+    async function downloadBackup(fileName) {
+      const url = await storage.ref().child(`backups/${fileName}`).getDownloadURL();
+      window.open(url, '_blank');
+    }
+
+    function confirmRestore(fileName) {
+      if (confirm(`Are you sure you want to restore from ${fileName}?`)) {
+        restoreBackup(fileName);
+      }
+    }
+
+    async function restoreBackup(fileName) {
+      const url = await storage.ref().child(`backups/${fileName}`).getDownloadURL();
+      const res = await fetch(url);
+      const items = await res.json();
+      const batch = db.batch();
+      const stockRef = db.collection("stock");
+      const existing = await stockRef.get();
+      existing.forEach(doc => batch.delete(doc.ref));
+      items.forEach(item => {
+        const newRef = stockRef.doc();
+        batch.set(newRef, item);
+      });
+      await batch.commit();
+      alert("Backup restored.");
+    }
+
+    loadCategories();
+    loadBackupHistory();
+  </script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trash | Stock Register</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-gray-100">
+  <header class="bg-red-600 text-white p-4 flex justify-between items-center">
+    <h1 class="text-xl font-semibold">Trash (Deleted Items)</h1>
+    <button onclick="window.location.href='dashboard.html'" class="bg-white text-red-600 px-3 py-1 rounded hover:bg-gray-100">Back</button>
+  </header>
+
+  <main class="p-4">
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="text-lg font-semibold mb-4">Deleted Stock Items</h2>
+      <div class="overflow-x-auto">
+        <table class="min-w-full bg-white rounded border">
+          <thead>
+            <tr class="bg-gray-200 text-left">
+              <th class="p-2">Item</th>
+              <th class="p-2">Quantity</th>
+              <th class="p-2">Category</th>
+              <th class="p-2">Deleted By</th>
+              <th class="p-2">Date</th>
+              <th class="p-2">Action</th>
+            </tr>
+          </thead>
+          <tbody id="trashTable"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCi7NyZMr-Xx36wiMZFJy0gO2u3Yd-h68A",
+      authDomain: "sreepadma-stock-register.firebaseapp.com",
+      projectId: "sreepadma-stock-register"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    async function loadTrash() {
+      const trashTable = document.getElementById("trashTable");
+      trashTable.innerHTML = "";
+      try {
+        const snapshot = await db.collection("trash").orderBy("deletedAt", "desc").get();
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const date = data.deletedAt?.seconds ? new Date(data.deletedAt.seconds * 1000).toLocaleString() : "-";
+          const row = document.createElement("tr");
+          row.className = "border-t hover:bg-gray-50";
+          row.innerHTML = `
+            <td class="p-2">${data.name || '-'}</td>
+            <td class="p-2">${data.quantity || 0}</td>
+            <td class="p-2">${data.category || '-'}</td>
+            <td class="p-2">${data.deletedBy || '-'}</td>
+            <td class="p-2">${date}</td>
+            <td class="p-2">
+              <button onclick="restoreItem('${doc.id}', this)" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">Restore</button>
+            </td>
+          `;
+          trashTable.appendChild(row);
+        });
+      } catch (error) {
+        console.error("Error loading trash data:", error);
+      }
+    }
+
+    async function restoreItem(id, button) {
+      if (!confirm("Are you sure you want to restore this item?")) return;
+      try {
+        const docRef = db.collection("trash").doc(id);
+        const docSnap = await docRef.get();
+        if (!docSnap.exists) {
+          alert("Item no longer exists.");
+          return;
+        }
+        const data = docSnap.data();
+        await db.collection("stock").add({ ...data, restoredAt: new Date() });
+        await docRef.delete();
+        button.closest("tr").remove();
+      } catch (error) {
+        console.error("Error restoring item:", error);
+      }
+    }
+
+    loadTrash();
+  </script>
+</body>
+</html>

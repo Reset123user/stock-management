@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>History | Stock Register</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-gray-100">
+  <header class="bg-blue-600 text-white p-4 flex justify-between items-center">
+    <h1 class="text-xl font-semibold">Stock History</h1>
+    <button onclick="window.location.href='dashboard.html'" class="bg-white text-blue-600 px-3 py-1 rounded hover:bg-gray-100">Back</button>
+  </header>
+
+  <main class="p-4">
+    <section class="bg-white p-4 rounded shadow mb-6">
+      <h2 class="text-lg font-semibold mb-4">Stock In/Out History</h2>
+      <div class="mb-4">
+        <input type="text" id="searchInput" oninput="filterHistory()" placeholder="Search by item name or user..." class="px-3 py-2 border rounded w-full">
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full bg-white rounded border">
+          <thead>
+            <tr class="bg-gray-200 text-left">
+              <th class="p-2">Item</th>
+              <th class="p-2">Type</th>
+              <th class="p-2">Qty</th>
+              <th class="p-2">User</th>
+              <th class="p-2">Date</th>
+              <th class="p-2">Reason</th>
+            </tr>
+          </thead>
+          <tbody id="historyTable"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCi7NyZMr-Xx36wiMZFJy0gO2u3Yd-h68A",
+      authDomain: "sreepadma-stock-register.firebaseapp.com",
+      projectId: "sreepadma-stock-register"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    async function loadHistory() {
+      try {
+        const historyTable = document.getElementById("historyTable");
+        historyTable.innerHTML = "";
+
+        const snapshot = await db.collection("history").orderBy("timestamp", "desc").get();
+        if (snapshot.empty) {
+          const row = document.createElement("tr");
+          row.innerHTML = `<td colspan="6" class="p-2 text-center text-gray-500">No history found</td>`;
+          historyTable.appendChild(row);
+          return;
+        }
+
+        snapshot.forEach(doc => {
+          const data = doc.data();
+          const timestamp = data.timestamp;
+          let dateStr = "-";
+          if (timestamp && timestamp.seconds) {
+            dateStr = new Date(timestamp.seconds * 1000).toLocaleString();
+          }
+          const row = document.createElement("tr");
+          row.className = "border-t hover:bg-gray-50";
+          row.innerHTML = `
+            <td class="p-2">${data.item || "-"}</td>
+            <td class="p-2">${data.type || "-"}</td>
+            <td class="p-2">${data.quantity || 0}</td>
+            <td class="p-2">${data.user || "-"}</td>
+            <td class="p-2">${dateStr}</td>
+            <td class="p-2">${data.reason || "-"}</td>
+          `;
+          historyTable.appendChild(row);
+        });
+      } catch (error) {
+        console.error("Error loading history:", error);
+        const historyTable = document.getElementById("historyTable");
+        historyTable.innerHTML = `<tr><td colspan="6" class="p-2 text-center text-red-600">Failed to load history. Please try again later.</td></tr>`;
+      }
+    }
+
+    function filterHistory() {
+      const query = document.getElementById("searchInput").value.toLowerCase();
+      const rows = document.querySelectorAll("#historyTable tr");
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(query) ? "" : "none";
+      });
+    }
+
+    loadHistory();
+  </script>
+</body>
+</html>

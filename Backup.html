@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Backup | Stock Register</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-storage-compat.js"></script>
+</head>
+<body class="bg-gray-100">
+  <header class="bg-blue-600 text-white p-4 flex justify-between items-center">
+    <h1 class="text-xl font-semibold">Backup & Restore</h1>
+    <button onclick="window.location.href='dashboard.html'" class="bg-white text-blue-600 px-3 py-1 rounded hover:bg-gray-100">Back</button>
+  </header>
+
+  <main class="p-4">
+    <section class="bg-white p-4 rounded shadow mb-6">
+      <h2 class="text-lg font-semibold mb-4">Manual Backup</h2>
+      <button onclick="backupNow()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Backup Now</button>
+    </section>
+
+    <section class="bg-white p-4 rounded shadow">
+      <h2 class="text-lg font-semibold mb-4">Backup History</h2>
+      <ul id="backupList" class="space-y-2"></ul>
+    </section>
+  </main>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCi7NyZMr-Xx36wiMZFJy0gO2u3Yd-h68A",
+      authDomain: "sreepadma-stock-register.firebaseapp.com",
+      projectId: "sreepadma-stock-register",
+      storageBucket: "sreepadma-stock-register.appspot.com"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const storage = firebase.storage();
+
+    async function backupNow() {
+      const timestamp = Date.now();
+      const docSnap = await db.collection("stock").get();
+      const data = docSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const ref = storage.ref(`backups/backup-${timestamp}.json`);
+      await ref.put(blob);
+      alert("Backup completed successfully!");
+      loadBackups();
+    }
+
+    async function loadBackups() {
+      const list = document.getElementById("backupList");
+      list.innerHTML = "<li>Loading...</li>";
+      const result = await storage.ref("backups").listAll();
+      const items = await Promise.all(
+        result.items.map(async item => {
+          const url = await item.getDownloadURL();
+          const name = item.name;
+          const time = new Date(parseInt(name.split("-")[1])).toLocaleString();
+          return `<li class="flex justify-between items-center bg-gray-50 p-3 rounded">
+            <span>${time}</span>
+            <div class="space-x-2">
+              <a href="${url}" download class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">Download</a>
+              <button onclick="restoreBackup('${url}')" class="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600">Restore</button>
+            </div>
+          </li>`;
+        })
+      );
+      list.innerHTML = items.join("");
+    }
+
+    async function restoreBackup(url) {
+      const confirmed = confirm("Are you sure you want to restore this backup? This will overwrite existing data.");
+      if (!confirmed) return;
+
+      const response = await fetch(url);
+      const data = await response.json();
+
+      const batch = db.batch();
+      data.forEach(item => {
+        const ref = db.collection("stock").doc(item.id);
+        batch.set(ref, item);
+      });
+
+      await batch.commit();
+      alert("Backup restored successfully.");
+    }
+
+    loadBackups();
+  </script>
+</body>
+</html>
