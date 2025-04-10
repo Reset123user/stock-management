@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login | Stock Management</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+  <div class="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
+    <h2 class="text-3xl font-bold mb-6 text-center text-gray-700">Login</h2>
+
+    <div class="mb-4">
+      <label class="block text-sm font-medium text-gray-700">Username</label>
+      <input id="username" type="text" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Enter your username" />
+    </div>
+
+    <div class="mb-6">
+      <label class="block text-sm font-medium text-gray-700">Password</label>
+      <input id="password" type="password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Enter your password" />
+    </div>
+
+    <button onclick="login()" class="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">Login</button>
+
+    <p class="text-xs text-center mt-4 text-gray-500">Only authorized users allowed. Contact admin for credentials.</p>
+  </div>
+
+  <script>
+    const admin = {
+      username: "sreepadmasalesreport@gmail.com",
+      password: "admin123"
+    };
+
+    const users = {
+      lab: "lab123",
+      storeroom: "store123",
+      sales: "sales123",
+      office: "office123"
+    };
+
+    async function logLoginEvent(username, role) {
+      const db = firebase.firestore();
+      await db.collection("login_logs").add({
+        username,
+        role,
+        timestamp: new Date()
+      });
+    }
+
+    function login() {
+      const username = document.getElementById("username").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      if (username === admin.username && password === admin.password) {
+        sessionStorage.setItem("role", "admin");
+        sessionStorage.setItem("user", username);
+        logLoginEvent(username, "admin");
+        window.location.href = "dashboard.html";
+      } else if (users[username] === password) {
+        sessionStorage.setItem("role", "user");
+        sessionStorage.setItem("user", username);
+        logLoginEvent(username, "user");
+        window.location.href = "dashboard.html";
+      } else {
+        alert("Invalid username or password.");
+      }
+    }
+  </script>
+</body>
+</html>
