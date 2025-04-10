@@ -45,6 +45,7 @@
   <!-- Quantity Summary -->
   <div class="bg-white shadow p-4 mt-4 mx-4 rounded text-sm">
     <span id="summary"></span>
+    <button onclick="showTotalQty()" class="ml-4 bg-indigo-600 text-white px-3 py-1 rounded">Show Total Quantity</button>
   </div>
 
   <!-- Floating Add Item Button -->
@@ -62,6 +63,7 @@
         <button onclick="hideAddModal()" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cancel</button>
         <button onclick="addItem()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Add</button>
       </div>
+      <p id="saveStatus" class="mt-2 text-green-600 hidden">✅ Item Saved</p>
     </div>
   </div>
 
@@ -105,6 +107,7 @@
 
     function showAddModal() {
       document.getElementById("addModal").classList.remove("hidden");
+      document.getElementById("saveStatus").classList.add("hidden");
     }
 
     function hideAddModal() {
@@ -121,9 +124,15 @@
       if (name && !isNaN(qty) && !isNaN(min) && cat) {
         stock.push({ name, qty, min, cat, date });
         updateCategoryFilter();
-        hideAddModal();
         renderStock();
+        document.getElementById("saveStatus").classList.remove("hidden");
+        setTimeout(hideAddModal, 1000);
       }
+    }
+
+    function showTotalQty() {
+      const total = stock.reduce((sum, item) => sum + item.qty, 0);
+      alert(`Total quantity of all items: ${total}`);
     }
 
     function changeQty(index, delta) {
